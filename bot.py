@@ -19,9 +19,9 @@ dp = Dispatcher(storage=storage)
 # ========== ФАЙЛЫ ДАННЫХ ==========
 CATALOG_FILE = "catalog.json"
 REQUESTS_FILE = "requests.json"
+BOTS_PER_PAGE = 5
 
 def load_catalog():
-    """Загружает каталог из файла"""
     if os.path.exists(CATALOG_FILE):
         try:
             with open(CATALOG_FILE, 'r', encoding='utf-8') as f:
@@ -34,12 +34,10 @@ def load_catalog():
     }
 
 def save_catalog(catalog):
-    """Сохраняет каталог в файл"""
     with open(CATALOG_FILE, 'w', encoding='utf-8') as f:
         json.dump(catalog, f, ensure_ascii=False, indent=2)
 
 def load_requests():
-    """Загружает заявки из файла"""
     if os.path.exists(REQUESTS_FILE):
         try:
             with open(REQUESTS_FILE, 'r', encoding='utf-8') as f:
@@ -49,11 +47,9 @@ def load_requests():
     return {}
 
 def save_requests(requests):
-    """Сохраняет заявки в файл"""
     with open(REQUESTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(requests, f, ensure_ascii=False, indent=2)
 
-# Загружаем каталог
 catalog = load_catalog()
 
 all_categories = ["встроенные", "боты-менеджеры", "общение", "обучение", 
@@ -116,6 +112,62 @@ def category_keyboard():
     builder.adjust(2)
     return builder.as_markup()
 
+# ========== ФУНКЦИЯ ДЛЯ ПОСТРАНИЧНОГО ВЫВОДА БОТОВ ==========
+async def show_bots_page(callback: CallbackQuery, category: str, page: int):
+    """Показывает определённую страницу с ботами в категории"""
+    bots = catalog.get(category, [])
+    total_bots = len(bots)
+    
+    if total_bots == 0:
+        await callback.message.edit_text(
+            f"📭 *Категория: {category.capitalize()}*\n\nПока нет ботов.",
+            reply_markup=back_to_catalog_button(),
+            parse_mode="Markdown"
+        )
+        return
+    
+    total_pages = (total_bots + BOTS_PER_PAGE - 1) // BOTS_PER_PAGE
+    
+    if page < 1:
+        page = 1
+    if page > total_pages:
+        page = total_pages
+    
+    start_idx = (page - 1) * BOTS_PER_PAGE
+    end_idx = min(start_idx + BOTS_PER_PAGE, total_bots)
+    bots_to_show = bots[start_idx:end_idx]
+    
+    text = f"📁 *{category.capitalize()}* — страница {page}/{total_pages}\n\n"
+    for i, b in enumerate(bots_to_show, start_idx + 1):
+        text += f"*{i}. {b['name']}*\n"
+        text += f"📌 *Описание:* {b['function']}\n"
+        text += f"🔗 *Ссылка:* [Перейти]({b['link']})\n"
+        text += f"📢 *Реклама:* {b['ad']}\n"
+        text += f"👤 *Автор:* {b['author']}\n"
+        text += "——————————————\n"
+    
+    builder = InlineKeyboardBuilder()
+    
+    nav_buttons = []
+    if page > 1:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"bots_{category}_{page-1}"))
+    if page < total_pages:
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Вперёд", callback_data=f"bots_{category}_{page+1}"))
+    
+    if nav_buttons:
+        builder.row(*nav_buttons)
+    
+    builder.button(text="🔙 Назад в каталог", callback_data="open_catalog")
+    builder.button(text="🏠 В меню", callback_data="back_to_start")
+    builder.adjust(2)
+    
+    await callback.message.edit_text(
+        text,
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
 # ========== ОБРАБОТЧИКИ ==========
 @dp.message(Command("start"))
 async def start_command(message: Message):
@@ -169,28 +221,13 @@ async def change_catalog_page(callback: CallbackQuery):
 @dp.callback_query(F.data.startswith("cat_"))
 async def show_category(callback: CallbackQuery):
     category = callback.data.split("_")[1]
-    bots = catalog.get(category, [])
-    
-    if not bots:
-        await callback.message.edit_text(
-            f"📭 *Категория: {category.capitalize()}*\n\nПока нет ботов.",
-            reply_markup=back_to_catalog_button(),
-            parse_mode="Markdown"
-        )
-        await callback.answer()
-        return
-    
-    text = f"📁 *{category.capitalize()}*\n\n"
-    for i, b in enumerate(bots, 1):
-        text += f"*{i}. {b['name']}*\n📌 {b['function']}\n🔗 [Ссылка]({b['link']})\n📢 {b['ad']}\n👤 {b['author']}\n—————————\n"
-    
-    await callback.message.edit_text(
-        text,
-        reply_markup=back_to_catalog_button(),
-        parse_mode="Markdown",
-        disable_web_page_preview=True
-    )
-    await callback.answer()
+    await show_bots_page(callback, category, 1)
+
+@dp.callback_query(F.data.startswith("bots_"))
+async def handle_bots_page(callback: CallbackQuery):
+    _, category, page_str = callback.data.split("_")
+    page = int(page_str)
+    await show_bots_page(callback, category, page)
 
 # ========== ДОБАВЛЕНИЕ БОТА ==========
 @dp.callback_query(F.data == "add_bot")
@@ -216,12 +253,18 @@ async def get_category(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(AddBotStates.waiting_for_name)
 async def get_name(message: Message, state: FSMContext):
+    if len(message.text) > 50:
+        await message.answer("❌ Название слишком длинное (макс. 50 символов)")
+        return
     await state.update_data(name=message.text)
     await message.answer("📝 *Шаг 2/5*\n*Описание:* что умеет бот?", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_function)
 
 @dp.message(AddBotStates.waiting_for_function)
 async def get_function(message: Message, state: FSMContext):
+    if len(message.text) > 300:
+        await message.answer("❌ Описание слишком длинное (макс. 300 символов)")
+        return
     await state.update_data(function=message.text)
     await message.answer("📝 *Шаг 3/5*\n*Ссылка:* https://t.me/...", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_link)
@@ -230,7 +273,7 @@ async def get_function(message: Message, state: FSMContext):
 async def get_link(message: Message, state: FSMContext):
     link = message.text.strip()
     if not (link.startswith("https://t.me/") or link.startswith("http://t.me/")):
-        await message.answer("❌ Ссылка должна быть на Telegram бота.")
+        await message.answer("❌ Ссылка должна быть на Telegram бота. Пример: https://t.me/username_bot")
         return
     await state.update_data(link=link)
     await message.answer("📝 *Шаг 4/5*\n*Реклама:* есть или нет?", parse_mode="Markdown")
@@ -239,7 +282,7 @@ async def get_link(message: Message, state: FSMContext):
 @dp.message(AddBotStates.waiting_for_ad)
 async def get_ad(message: Message, state: FSMContext):
     await state.update_data(ad=message.text)
-    await message.answer("📝 *Шаг 5/5*\n*Автор:* @username", parse_mode="Markdown")
+    await message.answer("📝 *Шаг 5/5*\n*Автор:* @username или имя", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_author)
 
 @dp.message(AddBotStates.waiting_for_author)
@@ -247,7 +290,6 @@ async def get_author(message: Message, state: FSMContext):
     await state.update_data(author=message.text)
     data = await state.get_data()
     
-    # Сохраняем заявку
     requests = load_requests()
     requests[str(message.from_user.id)] = {
         "user_id": message.from_user.id,
@@ -264,9 +306,9 @@ async def get_author(message: Message, state: FSMContext):
          InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{message.from_user.id}")]
     ])
     
-    text = f"📨 *Заявка*\n👤 {message.from_user.full_name}\n🤖 {data['name']}\n📂 {data['category']}"
+    text = f"📨 *НОВАЯ ЗАЯВКА*\n\n👤 От: {message.from_user.full_name}\n🤖 Бот: {data['name']}\n📂 Категория: {data['category']}\n📌 Описание: {data['function']}\n🔗 Ссылка: {data['link']}\n📢 Реклама: {data['ad']}\n👤 Автор: {data['author']}"
     await bot.send_message(ADMIN_ID, text, reply_markup=keyboard, parse_mode="Markdown")
-    await message.answer("✅ *Заявка отправлена!*", reply_markup=start_menu(), parse_mode="Markdown")
+    await message.answer("✅ *Заявка отправлена!*\n\nАдминистратор проверит бота и добавит в каталог.", reply_markup=start_menu(), parse_mode="Markdown")
     await state.clear()
 
 @dp.callback_query(F.data == "cancel_add")
@@ -276,14 +318,12 @@ async def cancel_add(callback: CallbackQuery, state: FSMContext):
 
 # ========== АДМИНКА С АВТО-ОБНОВЛЕНИЕМ ==========
 def reload_catalog():
-    """Перезагружает каталог из файла (глобальная переменная)"""
     global catalog
     catalog = load_catalog()
     print(f"🔄 Каталог обновлён! Всего ботов: {sum(len(b) for b in catalog.values())}")
 
 @dp.callback_query(F.data.startswith("approve_"))
 async def approve_bot(callback: CallbackQuery):
-    """Принять бота и добавить в каталог с авто-обновлением"""
     user_id = int(callback.data.split("_")[1])
     
     requests = load_requests()
@@ -297,10 +337,8 @@ async def approve_bot(callback: CallbackQuery):
     bot_data = request_data["data"]
     category = bot_data["category"]
     
-    # Загружаем текущий каталог
     current_catalog = load_catalog()
     
-    # Добавляем бота
     new_bot = {
         "name": bot_data["name"],
         "function": bot_data["function"],
@@ -313,34 +351,19 @@ async def approve_bot(callback: CallbackQuery):
         current_catalog[category] = []
     
     current_catalog[category].append(new_bot)
-    
-    # Сохраняем
     save_catalog(current_catalog)
     
-    # ПЕРЕЗАГРУЖАЕМ КАТАЛОГ В ПАМЯТИ!
     reload_catalog()
     
-    # Удаляем заявку
     del requests[request_key]
     save_requests(requests)
     
-    # Уведомляем пользователя
-    await bot.send_message(
-        user_id,
-        f"✅ *Ваш бот «{bot_data['name']}» добавлен в каталог!*\n\n📂 Категория: {category.capitalize()}",
-        parse_mode="Markdown"
-    )
-    
-    # Обновляем сообщение у админа
-    await callback.message.edit_text(
-        f"✅ *Бот одобрен и добавлен в каталог*\n\n{callback.message.text}",
-        parse_mode="Markdown"
-    )
+    await bot.send_message(user_id, f"✅ *Ваш бот «{bot_data['name']}» добавлен в каталог!*", parse_mode="Markdown")
+    await callback.message.edit_text(f"✅ *Бот одобрен и добавлен в каталог*\n\n{callback.message.text}", parse_mode="Markdown")
     await callback.answer("✅ Бот добавлен в каталог!")
 
 @dp.callback_query(F.data.startswith("reject_"))
 async def reject_bot(callback: CallbackQuery):
-    """Отклонить бота"""
     user_id = int(callback.data.split("_")[1])
     
     requests = load_requests()
@@ -356,21 +379,12 @@ async def reject_bot(callback: CallbackQuery):
     del requests[request_key]
     save_requests(requests)
     
-    await bot.send_message(
-        user_id,
-        f"❌ *Ваш бот «{bot_name}» отклонён.*\n\nТы можешь отправить заявку ещё раз!",
-        parse_mode="Markdown"
-    )
-    
-    await callback.message.edit_text(
-        f"❌ *Бот отклонён*\n\n{callback.message.text}",
-        parse_mode="Markdown"
-    )
+    await bot.send_message(user_id, f"❌ *Ваш бот «{bot_name}» отклонён.*", parse_mode="Markdown")
+    await callback.message.edit_text(f"❌ *Бот отклонён*\n\n{callback.message.text}", parse_mode="Markdown")
     await callback.answer("❌ Бот отклонён")
 
 @dp.message(Command("requests"))
 async def show_requests(message: Message):
-    """Показать все активные заявки (только для админа)"""
     if message.from_user.id != ADMIN_ID:
         await message.answer("❌ У вас нет прав для этой команды.")
         return
