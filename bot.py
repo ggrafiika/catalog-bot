@@ -16,9 +16,12 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
+# ========== ФАЙЛЫ ДАННЫХ ==========
 CATALOG_FILE = "catalog.json"
+REQUESTS_FILE = "requests.json"
 
 def load_catalog():
+    """Загружает каталог из файла"""
     if os.path.exists(CATALOG_FILE):
         try:
             with open(CATALOG_FILE, 'r', encoding='utf-8') as f:
@@ -31,9 +34,26 @@ def load_catalog():
     }
 
 def save_catalog(catalog):
+    """Сохраняет каталог в файл"""
     with open(CATALOG_FILE, 'w', encoding='utf-8') as f:
         json.dump(catalog, f, ensure_ascii=False, indent=2)
 
+def load_requests():
+    """Загружает заявки из файла"""
+    if os.path.exists(REQUESTS_FILE):
+        try:
+            with open(REQUESTS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_requests(requests):
+    """Сохраняет заявки в файл"""
+    with open(REQUESTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(requests, f, ensure_ascii=False, indent=2)
+
+# Загружаем каталог
 catalog = load_catalog()
 
 all_categories = ["встроенные", "боты-менеджеры", "общение", "обучение", 
@@ -49,6 +69,7 @@ class AddBotStates(StatesGroup):
     waiting_for_ad = State()
     waiting_for_author = State()
 
+# ========== МЕНЮ ==========
 def start_menu():
     builder = InlineKeyboardBuilder()
     builder.button(text="📚 Каталог", callback_data="open_catalog")
@@ -95,6 +116,7 @@ def category_keyboard():
     builder.adjust(2)
     return builder.as_markup()
 
+# ========== ОБРАБОТЧИКИ ==========
 @dp.message(Command("start"))
 async def start_command(message: Message):
     await message.answer(
@@ -170,6 +192,7 @@ async def show_category(callback: CallbackQuery):
     )
     await callback.answer()
 
+# ========== ДОБАВЛЕНИЕ БОТА ==========
 @dp.callback_query(F.data == "add_bot")
 async def start_add_bot(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
@@ -224,6 +247,17 @@ async def get_author(message: Message, state: FSMContext):
     await state.update_data(author=message.text)
     data = await state.get_data()
     
+    # Сохраняем заявку
+    requests = load_requests()
+    requests[str(message.from_user.id)] = {
+        "user_id": message.from_user.id,
+        "user_name": message.from_user.full_name,
+        "username": message.from_user.username,
+        "data": data,
+        "status": "pending"
+    }
+    save_requests(requests)
+    
     from aiogram.types import InlineKeyboardMarkup
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Принять", callback_data=f"approve_{message.from_user.id}"),
@@ -240,19 +274,124 @@ async def cancel_add(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await back_to_start(callback)
 
+# ========== АДМИНКА С АВТО-ОБНОВЛЕНИЕМ ==========
+def reload_catalog():
+    """Перезагружает каталог из файла (глобальная переменная)"""
+    global catalog
+    catalog = load_catalog()
+    print(f"🔄 Каталог обновлён! Всего ботов: {sum(len(b) for b in catalog.values())}")
+
 @dp.callback_query(F.data.startswith("approve_"))
 async def approve_bot(callback: CallbackQuery):
-    await callback.message.edit_text(f"✅ *Одобрено*\n{callback.message.text}", parse_mode="Markdown")
-    await callback.answer()
+    """Принять бота и добавить в каталог с авто-обновлением"""
+    user_id = int(callback.data.split("_")[1])
+    
+    requests = load_requests()
+    request_key = str(user_id)
+    
+    if request_key not in requests:
+        await callback.answer("❌ Заявка не найдена!")
+        return
+    
+    request_data = requests[request_key]
+    bot_data = request_data["data"]
+    category = bot_data["category"]
+    
+    # Загружаем текущий каталог
+    current_catalog = load_catalog()
+    
+    # Добавляем бота
+    new_bot = {
+        "name": bot_data["name"],
+        "function": bot_data["function"],
+        "link": bot_data["link"],
+        "ad": bot_data["ad"],
+        "author": bot_data["author"]
+    }
+    
+    if category not in current_catalog:
+        current_catalog[category] = []
+    
+    current_catalog[category].append(new_bot)
+    
+    # Сохраняем
+    save_catalog(current_catalog)
+    
+    # ПЕРЕЗАГРУЖАЕМ КАТАЛОГ В ПАМЯТИ!
+    reload_catalog()
+    
+    # Удаляем заявку
+    del requests[request_key]
+    save_requests(requests)
+    
+    # Уведомляем пользователя
+    await bot.send_message(
+        user_id,
+        f"✅ *Ваш бот «{bot_data['name']}» добавлен в каталог!*\n\n📂 Категория: {category.capitalize()}",
+        parse_mode="Markdown"
+    )
+    
+    # Обновляем сообщение у админа
+    await callback.message.edit_text(
+        f"✅ *Бот одобрен и добавлен в каталог*\n\n{callback.message.text}",
+        parse_mode="Markdown"
+    )
+    await callback.answer("✅ Бот добавлен в каталог!")
 
 @dp.callback_query(F.data.startswith("reject_"))
 async def reject_bot(callback: CallbackQuery):
-    await callback.message.edit_text(f"❌ *Отклонено*\n{callback.message.text}", parse_mode="Markdown")
-    await callback.answer()
+    """Отклонить бота"""
+    user_id = int(callback.data.split("_")[1])
+    
+    requests = load_requests()
+    request_key = str(user_id)
+    
+    if request_key not in requests:
+        await callback.answer("❌ Заявка не найдена!")
+        return
+    
+    request_data = requests[request_key]
+    bot_name = request_data["data"]["name"]
+    
+    del requests[request_key]
+    save_requests(requests)
+    
+    await bot.send_message(
+        user_id,
+        f"❌ *Ваш бот «{bot_name}» отклонён.*\n\nТы можешь отправить заявку ещё раз!",
+        parse_mode="Markdown"
+    )
+    
+    await callback.message.edit_text(
+        f"❌ *Бот отклонён*\n\n{callback.message.text}",
+        parse_mode="Markdown"
+    )
+    await callback.answer("❌ Бот отклонён")
+
+@dp.message(Command("requests"))
+async def show_requests(message: Message):
+    """Показать все активные заявки (только для админа)"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ У вас нет прав для этой команды.")
+        return
+    
+    requests = load_requests()
+    if not requests:
+        await message.answer("📭 Нет активных заявок.")
+        return
+    
+    text = f"📋 *Активные заявки ({len(requests)}):*\n\n"
+    for req_id, req in requests.items():
+        data = req["data"]
+        text += f"🆔 ID: `{req_id}`\n👤 От: {req['user_name']}\n🤖 {data['name']}\n📂 {data['category']}\n—————————\n"
+    
+    await message.answer(text, parse_mode="Markdown")
 
 async def main():
     print("🤖 Бот запущен!")
     print(f"👑 Админ ID: {ADMIN_ID}")
+    total = sum(len(b) for b in catalog.values())
+    print(f"📊 Всего ботов в каталоге: {total}")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
