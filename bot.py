@@ -8,16 +8,17 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiohttp import web
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", 8567332113:AAElunfiiL9_tB7xO2frHYSe622TJ4DvMj0)
-ADMIN_ID = int(os.getenv("ADMIN_ID", 5766959505))
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID", 123456789))
 
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# ========== ФАЙЛЫ ДАННЫХ ==========
+# ========== 📁 ФАЙЛЫ ДАННЫХ ==========
 CATALOG_FILE = "catalog.json"
 REQUESTS_FILE = "requests.json"
 BOTS_PER_PAGE = 5
@@ -66,7 +67,7 @@ class AddBotStates(StatesGroup):
     waiting_for_ad = State()
     waiting_for_author = State()
 
-# ========== МЕНЮ ==========
+# ========== 🎛️ МЕНЮ ==========
 def start_menu():
     builder = InlineKeyboardBuilder()
     builder.button(text="📖 Каталог", callback_data="open_catalog")
@@ -109,11 +110,11 @@ def category_keyboard():
     builder = InlineKeyboardBuilder()
     for cat in all_categories:
         builder.button(text=cat.capitalize(), callback_data=f"add_cat_{cat}")
-    builder.button(text="⬅️ Отмена", callback_data="cancel_add")
+    builder.button(text="↪️ Отмена", callback_data="cancel_add")
     builder.adjust(2)
     return builder.as_markup()
 
-# ========== ФУНКЦИЯ ДЛЯ ПОСТРАНИЧНОГО ВЫВОДА БОТОВ ==========
+# ========== 📄 ФУНКЦИЯ ДЛЯ ПОСТРАНИЧНОГО ВЫВОДА БОТОВ ==========
 async def show_bots_page(callback: CallbackQuery, category: str, page: int):
     """Показывает определённую страницу с ботами в категории"""
     bots = catalog.get(category, [])
@@ -169,7 +170,7 @@ async def show_bots_page(callback: CallbackQuery, category: str, page: int):
         disable_web_page_preview=True
     )
 
-# ========== ОБРАБОТЧИКИ ==========
+# ========== 🎯 ОБРАБОТЧИКИ ==========
 @dp.message(Command("start"))
 async def start_command(message: Message):
     await message.answer(
@@ -193,7 +194,7 @@ async def about(callback: CallbackQuery):
         "ℹ️ *О проекте*\n\n"
         "Этот бот-каталог создан в рамках школьного проекта.\n\n"
         "🖋️ *Автор:* @ggrafiika\n\n"
-        "🩶 *Поддержать:* напиши мне\n\nСпасибо! 🩶"
+        "🩶 *Поддержать:* напиши @ggrafiika\n\nСпасибо! 🩶"
     )
     builder = InlineKeyboardBuilder()
     builder.button(text="🆗 В меню", callback_data="back_to_start")
@@ -230,11 +231,11 @@ async def handle_bots_page(callback: CallbackQuery):
     page = int(page_str)
     await show_bots_page(callback, category, page)
 
-# ========== ДОБАВЛЕНИЕ БОТА ==========
+# ========== ➕ ДОБАВЛЕНИЕ БОТА ==========
 @dp.callback_query(F.data == "add_bot")
 async def start_add_bot(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        "🖋️ *ДОБАВЛЕНИЕ БОТА*\n\nВыбери категорию:",
+        "🗒️ *ДОБАВЛЕНИЕ БОТА*\n\nВыбери категорию:",
         reply_markup=category_keyboard(),
         parse_mode="Markdown"
     )
@@ -246,7 +247,7 @@ async def get_category(callback: CallbackQuery, state: FSMContext):
     category = callback.data.split("_", 2)[2]
     await state.update_data(category=category)
     await callback.message.edit_text(
-        f"🖋️ *Шаг 1/5*\nВведи *название* бота:",
+        f"🗒️ *Шаг 1/5*\nВведи *название* бота:",
         parse_mode="Markdown"
     )
     await state.set_state(AddBotStates.waiting_for_name)
@@ -258,7 +259,7 @@ async def get_name(message: Message, state: FSMContext):
         await message.answer("↪️ Название слишком длинное (макс. 50 символов)")
         return
     await state.update_data(name=message.text)
-    await message.answer("🖋️ *Шаг 2/5*\n*Описание:* что умеет бот?", parse_mode="Markdown")
+    await message.answer("🗒️ *Шаг 2/5*\n*Описание:* что умеет бот?", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_function)
 
 @dp.message(AddBotStates.waiting_for_function)
@@ -267,7 +268,7 @@ async def get_function(message: Message, state: FSMContext):
         await message.answer("↪️ Описание слишком длинное (макс. 300 символов)")
         return
     await state.update_data(function=message.text)
-    await message.answer("🖋️ *Шаг 3/5*\n*Ссылка:* https://t.me/...", parse_mode="Markdown")
+    await message.answer("🗒️ *Шаг 3/5*\n*Ссылка:* https://t.me/...", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_link)
 
 @dp.message(AddBotStates.waiting_for_link)
@@ -277,13 +278,13 @@ async def get_link(message: Message, state: FSMContext):
         await message.answer("↪️ Ссылка должна быть на Telegram бота. Пример: https://t.me/username_bot")
         return
     await state.update_data(link=link)
-    await message.answer("🖋️ *Шаг 4/5*\n*Реклама:* есть или нет?", parse_mode="Markdown")
+    await message.answer("🗒️ *Шаг 4/5*\n*Реклама:* есть или нет?", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_ad)
 
 @dp.message(AddBotStates.waiting_for_ad)
 async def get_ad(message: Message, state: FSMContext):
     await state.update_data(ad=message.text)
-    await message.answer("🖋️ *Шаг 5/5*\n*Автор:* @username или имя", parse_mode="Markdown")
+    await message.answer("🗒️ *Шаг 5/5*\n*Автор:* @username или имя", parse_mode="Markdown")
     await state.set_state(AddBotStates.waiting_for_author)
 
 @dp.message(AddBotStates.waiting_for_author)
@@ -306,7 +307,7 @@ async def get_author(message: Message, state: FSMContext):
          InlineKeyboardButton(text="↪️ Отклонить", callback_data=f"reject_{message.from_user.id}")]
     ])
     
-    text = f"✉️ *НОВАЯ ЗАЯВКА*\n\n👤 От: {message.from_user.full_name}\n📖 Бот: {data['name']}\n📂 Категория: {data['category']}\n🖋️ Описание: {data['function']}\n📎 Ссылка: {data['link']}\n📢 Реклама: {data['ad']}\n👤 Автор: {data['author']}"
+    text = f"✉️ *НОВАЯ ЗАЯВКА*\n\n👤 От: {message.from_user.full_name}\n*️⃣ Бот: {data['name']}\n📂 Категория: {data['category']}\n🖋️ Описание: {data['function']}\n🔗 Ссылка: {data['link']}\n📢 Реклама: {data['ad']}\n👤 Автор: {data['author']}"
     await bot.send_message(ADMIN_ID, text, reply_markup=keyboard, parse_mode="Markdown")
     await message.answer("▶️ *Заявка отправлена!*\n\nАдминистратор проверит бота и добавит в каталог.", reply_markup=start_menu(), parse_mode="Markdown")
     await state.clear()
@@ -316,7 +317,7 @@ async def cancel_add(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await back_to_start(callback)
 
-# ========== АДМИНКА С АВТО-ОБНОВЛЕНИЕМ ==========
+# ========== *️⃣ АДМИНКА С АВТО-ОБНОВЛЕНИЕМ ==========
 def reload_catalog():
     global catalog
     catalog = load_catalog()
@@ -397,33 +398,37 @@ async def show_requests(message: Message):
     text = f"🗒️ *Активные заявки ({len(requests)}):*\n\n"
     for req_id, req in requests.items():
         data = req["data"]
-        text += f"*️⃣ ID: `{req_id}`\n👤 От: {req['user_name']}\n📖 {data['name']}\n📂 {data['category']}\n—————————\n"
+        text += f"*️⃣ ID: `{req_id}`\n👤 От: {req['user_name']}\n*️⃣ {data['name']}\n📂 {data['category']}\n—————————\n"
     
     await message.answer(text, parse_mode="Markdown")
 
-# ========== ВЕБ-СЕРВЕР ДЛЯ RENDER ==========
-async def health_check(request):
-    return web.Response(text="▶️ Бот работает!")
+# ========== *️⃣ ВЕБ-СЕРВЕР ДЛЯ RENDER ==========
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'▶️ Bot is running!')
 
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
+def start_web_server():
     port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"▶️ Веб-сервер запущен на порту {port}")
+    server = HTTPServer(('0.0.0.0', port), HealthHandler)
+    print(f"*️⃣ Веб-сервер запущен на порту {port}")
+    server.serve_forever()
 
 async def start_bot():
-    print("📖 Бот запущен!")
-    print(f"🩶 Админ ID: 5766959505")
+    print("▶️ Бот запущен!")
+    print(f"*️⃣ Админ ID: {ADMIN_ID}")
     total = sum(len(b) for b in catalog.values())
     print(f"🗒️ Всего ботов в каталоге: {total}")
     await dp.start_polling(bot)
 
 async def main():
-    await asyncio.gather(start_web_server(), start_bot())
+    # Запускаем веб-сервер в отдельном потоке
+    web_thread = Thread(target=start_web_server, daemon=True)
+    web_thread.start()
+    # Запускаем бота
+    await start_bot()
 
 if __name__ == "__main__":
     asyncio.run(main())
