@@ -308,7 +308,7 @@ async def get_author(message: Message, state: FSMContext):
     ])
     
     text = f"✉️ *НОВАЯ ЗАЯВКА*\n\n👤 От: {message.from_user.full_name}\n*️⃣ Бот: {data['name']}\n📂 Категория: {data['category']}\n🖋️ Описание: {data['function']}\n🔗 Ссылка: {data['link']}\n📢 Реклама: {data['ad']}\n👤 Автор: {data['author']}"
-    await bot.send_message(ADMIN_ID, text, reply_markup=keyboard, parse_mode="Markdown")
+    await bot.send_message(ADMIN_ID, text, reply_markup=keyboard)
     await message.answer("▶️ *Заявка отправлена!*\n\nАдминистратор проверит бота и добавит в каталог.", reply_markup=start_menu(), parse_mode="Markdown")
     await state.clear()
 
