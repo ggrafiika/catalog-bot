@@ -79,7 +79,7 @@ def back_to_catalog_button():
 
 def category_keyboard():
     builder = InlineKeyboardBuilder()
-    for cat in all_categories:
+    for cat in categories:
         builder.button(text=cat.capitalize(), callback_data=f"add_cat_{cat}")
     builder.button(text="↪️ Отмена", callback_data="cancel_add")
     builder.adjust(2)
