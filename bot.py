@@ -26,8 +26,22 @@ storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 # ========== 📁 ФАЙЛЫ ДАННЫХ ==========
+# ========== ФАЙЛЫ ДАННЫХ ==========
 REQUESTS_FILE = "requests.json"
 BOTS_PER_PAGE = 5
+
+def load_requests():
+    if os.path.exists(REQUESTS_FILE):
+        try:
+            with open(REQUESTS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_requests(requests):
+    with open(REQUESTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(requests, f, ensure_ascii=False, indent=2)
 
 class AddBotStates(StatesGroup):
     waiting_for_category = State()
