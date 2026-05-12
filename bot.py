@@ -20,45 +20,8 @@ storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 # ========== 📁 ФАЙЛЫ ДАННЫХ ==========
-CATALOG_FILE = "catalog.json"
 REQUESTS_FILE = "requests.json"
 BOTS_PER_PAGE = 5
-
-def load_catalog():
-    if os.path.exists(CATALOG_FILE):
-        try:
-            with open(CATALOG_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {
-        "встроенные": [], "боты-менеджеры": [], "общение": [], "обучение": [],
-        "музыка": [], "фото/видео": [], "деньги": [], "другое": []
-    }
-
-def save_catalog(catalog):
-    with open(CATALOG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(catalog, f, ensure_ascii=False, indent=2)
-
-def load_requests():
-    if os.path.exists(REQUESTS_FILE):
-        try:
-            with open(REQUESTS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {}
-
-def save_requests(requests):
-    with open(REQUESTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(requests, f, ensure_ascii=False, indent=2)
-
-catalog = load_catalog()
-
-all_categories = ["встроенные", "боты-менеджеры", "общение", "обучение", 
-                   "музыка", "фото/видео", "деньги", "другое"]
-page_1_categories = all_categories[0:4]
-page_2_categories = all_categories[4:8]
 
 class AddBotStates(StatesGroup):
     waiting_for_category = State()
