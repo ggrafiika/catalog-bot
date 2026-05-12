@@ -10,10 +10,16 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
+
 from bots_data import catalog, categories
+
+# Разбиваем категории на две страницы (по 4 на каждой)
+page_1_categories = categories[0:4]
+page_2_categories = categories[4:8]
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 123456789))
+
 
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
@@ -31,9 +37,6 @@ class AddBotStates(StatesGroup):
     waiting_for_ad = State()
     waiting_for_author = State()
 
-# Разбиваем категории на две страницы
-page_1_categories = categories[0:4]
-page_2_categories = categories[4:8]
 
 # ========== 🎛️ МЕНЮ ==========
 def start_menu():
