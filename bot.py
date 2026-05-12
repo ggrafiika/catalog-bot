@@ -31,6 +31,10 @@ class AddBotStates(StatesGroup):
     waiting_for_ad = State()
     waiting_for_author = State()
 
+# Разбиваем категории на две страницы
+page_1_categories = categories[0:4]
+page_2_categories = categories[4:8]
+
 # ========== 🎛️ МЕНЮ ==========
 def start_menu():
     builder = InlineKeyboardBuilder()
