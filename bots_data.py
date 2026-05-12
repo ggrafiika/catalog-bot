@@ -1,53 +1,50 @@
-# ========== КАТАЛОГ БОТОВ ==========
-# Здесь хранятся все боты. Можешь добавлять, удалять, редактировать в любое время.
-
 catalog = {
     "встроенные": [
         {
             "name": "QuizBot",
-            "description": "Викторины и опросы",
+            "function": "Викторины и опросы",
             "link": "https://t.me/QuizBot",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "PollBot",
-            "description": "Создание опросов и голосований",
+            "function": "Создание опросов и голосований",
             "link": "https://t.me/PollBot",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "gif",
-            "description": "Поиск GIF-анимаций",
+            "function": "Поиск GIF-анимаций",
             "link": "https://t.me/gif",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "sticker",
-            "description": "Поиск стикеров",
+            "function": "Поиск стикеров",
             "link": "https://t.me/sticker",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "youtube",
-            "description": "Поиск видео на YouTube",
+            "function": "Поиск видео на YouTube",
             "link": "https://t.me/youtube",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "weather",
-            "description": "Прогноз погоды",
+            "function": "Прогноз погоды",
             "link": "https://t.me/weather",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "translate",
-            "description": "Перевод текста",
+            "function": "Перевод текста",
             "link": "https://t.me/translate",
             "ad": "Нет рекламы",
             "author": "@telegram"
@@ -56,21 +53,21 @@ catalog = {
     "боты-менеджеры": [
         {
             "name": "Group Manager",
-            "description": "Модерация чатов, антиспам, приветствия",
+            "function": "Модерация чатов, антиспам, приветствия",
             "link": "https://t.me/GroupManagerBot",
             "ad": "Нет рекламы",
             "author": "@GroupManager"
         },
         {
             "name": "Shieldy",
-            "description": "Защита от спама",
+            "function": "Защита от спама",
             "link": "https://t.me/shieldy_bot",
             "ad": "Нет рекламы",
             "author": "@shieldy"
         },
         {
             "name": "Rose",
-            "description": "Управление группами",
+            "function": "Управление группами",
             "link": "https://t.me/MissRose_bot",
             "ad": "Есть реклама в меню",
             "author": "@MissRose"
@@ -79,21 +76,21 @@ catalog = {
     "общение": [
         {
             "name": "ChatGPT",
-            "description": "Общение с искусственным интеллектом",
+            "function": "Общение с искусственным интеллектом",
             "link": "https://t.me/ChatGPTBot",
             "ad": "Есть платная подписка",
             "author": "@openai"
         },
         {
             "name": "Yandex GPT",
-            "description": "Нейросеть от Яндекса",
+            "function": "Нейросеть от Яндекса",
             "link": "https://t.me/YandexGPTBot",
             "ad": "Нет рекламы",
             "author": "@yandex"
         },
         {
             "name": "DeepSeek AI",
-            "description": "AI-помощник на русском",
+            "function": "AI-помощник на русском",
             "link": "https://t.me/deepseek_bot",
             "ad": "Нет рекламы",
             "author": "@deepseek"
@@ -102,14 +99,14 @@ catalog = {
     "обучение": [
         {
             "name": "English Bot",
-            "description": "Учим английский с играми",
+            "function": "Учим английский с играми",
             "link": "https://t.me/EnglishBot",
             "ad": "Нет рекламы",
             "author": "@english"
         },
         {
             "name": "LinguaLeo",
-            "description": "Изучение английского",
+            "function": "Изучение английского",
             "link": "https://t.me/lingualeo_bot",
             "ad": "Есть платные уроки",
             "author": "@lingualeo"
@@ -118,14 +115,14 @@ catalog = {
     "музыка": [
         {
             "name": "VK Music",
-            "description": "Поиск и скачивание музыки",
+            "function": "Поиск и скачивание музыки",
             "link": "https://t.me/vkmusic_bot",
             "ad": "Есть рекламные сообщения",
             "author": "@vkmusic"
         },
         {
             "name": "Spotify Bot",
-            "description": "Поиск треков Spotify",
+            "function": "Поиск треков Spotify",
             "link": "https://t.me/spotify_bot",
             "ad": "Нет рекламы",
             "author": "@spotify"
@@ -134,14 +131,14 @@ catalog = {
     "фото/видео": [
         {
             "name": "Remove BG",
-            "description": "Удаление фона на фото",
+            "function": "Удаление фона на фото",
             "link": "https://t.me/remove_bg_bot",
             "ad": "Есть лимиты в бесплатной версии",
             "author": "@removebg"
         },
         {
             "name": "Video Downloader",
-            "description": "Скачивание видео из соцсетей",
+            "function": "Скачивание видео из соцсетей",
             "link": "https://t.me/video_downloader_bot",
             "ad": "Есть реклама",
             "author": "@downloader"
@@ -150,14 +147,14 @@ catalog = {
     "деньги": [
         {
             "name": "Crypto Bot",
-            "description": "Обмен криптовалют",
+            "function": "Обмен криптовалют",
             "link": "https://t.me/crypto_bot",
             "ad": "Нет рекламы",
             "author": "@crypto"
         },
         {
             "name": "Wallet",
-            "description": "Кошелёк TON",
+            "function": "Кошелёк TON",
             "link": "https://t.me/wallet",
             "ad": "Нет рекламы",
             "author": "@wallet"
@@ -166,14 +163,14 @@ catalog = {
     "другое": [
         {
             "name": "BotFather",
-            "description": "Создание и управление ботами",
+            "function": "Создание и управление ботами",
             "link": "https://t.me/BotFather",
             "ad": "Нет рекламы",
             "author": "@telegram"
         },
         {
             "name": "StoreBot",
-            "description": "Telegram Premium",
+            "function": "Telegram Premium",
             "link": "https://t.me/StoreBot",
             "ad": "Нет рекламы",
             "author": "@telegram"
@@ -181,6 +178,5 @@ catalog = {
     ]
 }
 
-# Список категорий (порядок кнопок)
 categories = ["встроенные", "боты-менеджеры", "общение", "обучение", 
                "музыка", "фото/видео", "деньги", "другое"]
